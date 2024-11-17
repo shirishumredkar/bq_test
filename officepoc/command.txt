@@ -75,3 +75,29 @@
 	
 	SELECT * FROM `practical-case-436315-t2.project_surv_dtc_view.v_country_event` LIMIT 1000
 	
+	
+	--------------------------------------------------------------------------------------------------------------------
+	
+	
+BQ Flattening Dynamic Json
+
+	• Create Table json_content 
+	bq mk --table --time_partitioning_field period project_surv_dtc.json_content period:DATE,content:STRING
+
+	• Delete all record from table
+	bq query --use_legacy_sql=false "DELETE FROM `project_surv_dtc.json_content` WHERE true"
+	
+	• Insert Data into table  json_content
+	bq query --use_legacy_sql=false < json_content_1.sql
+	
+	• Call Python Processing
+	python etl_script.py --project_id practical-case-436315-t2 --dataset_id project_surv_dtc  --source_table_id json_content --target_table_id json_content_flat --column_name content --period '2024-11-01'
+	
+	
+	• Insert Data into table  json_content - Add new Column in Json
+	bq query --use_legacy_sql=false < json_content_2.sql
+	
+	• Call Python Processing for 2nd date for amended Json
+	python etl_script.py --project_id practical-case-436315-t2 --dataset_id project_surv_dtc  --source_table_id json_content --target_table_id json_content_flat --column_name content --period '2024-11-02'
+	
+
