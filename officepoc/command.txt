@@ -1,0 +1,77 @@
+	• Cloud SDK login locally
+	gcloud auth login
+	gcloud config set project practical-case-436315-t2
+	gcloud config list project
+	
+	• Create BQ Dataset
+	bq mk --dataset project_surv_dtc
+	
+	• Create Table in BQ Dataset
+	bq mk --table --time_partitioning_field load_date --clustering_fields country_name,city_name project_surv_dtc.country_event load_date:DATE,country_name:STRING,city_name:STRING,first_name:STRING,last_name:STRING,email:STRING
+	
+	• Random Dataset Insert - create file country_event_insert.sql inside D:\GCPLearning\codebase\officepoc
+	INSERT INTO `project_surv_dtc.country_event` (load_date, country_name, city_name, first_name, last_name, email)
+	VALUES
+	  ('2024-11-01', 'IN', 'Mumbai', 'John', 'Doe', 'john.doe@example.com'),
+	  ('2024-11-01', 'US', 'New York', 'Jane', 'Smith', 'jane.smith@example.com'),
+	  ('2024-11-01', 'JP', 'Tokyo', 'Alex', 'Johnson', 'alex.johnson@example.com'),
+	  ('2024-11-02', 'CN', 'Beijing', 'Emily', 'Williams', 'emily.williams@example.com'),
+	  ('2024-11-02', 'DE', 'Berlin', 'Chris', 'Brown', 'chris.brown@example.com'),
+	  ('2024-11-02', 'IN', 'Mumbai', 'Priya', 'Kumar', 'priya.kumar@example.com'),
+	  ('2024-11-03', 'US', 'Los Angeles', 'Michael', 'Lee', 'michael.lee@example.com'),
+	  ('2024-11-03', 'JP', 'Osaka', 'Nina', 'Tanaka', 'nina.tanaka@example.com'),
+	  ('2024-11-03', 'CN', 'Shanghai', 'Wei', 'Chen', 'wei.chen@example.com'),
+	  ('2024-11-04', 'DE', 'Munich', 'Anna', 'Schmidt', 'anna.schmidt@example.com');
+	
+	• Delete all record from table
+	bq query --use_legacy_sql=false "DELETE FROM `project_surv_dtc.country_event` WHERE true"
+	
+	• Insert all record 
+	bq query --use_legacy_sql=false < country_event_insert.sql
+
+	•  Create Country Reference Table
+	bq mk --table --clustering_fields country project_surv_dtc.country_ref country:STRING
+	
+	• Insert all record 
+	bq query --use_legacy_sql=false < country_ref.sql
+	
+	•  Create Row Level Security
+	bq query --use_legacy_sql=false "CREATE ROW ACCESS POLICY dtc_rls_policy ON `project_surv_dtc.country_ref` GRANT TO ('user:neetau43@gmail.com') FILTER USING (country = 'DE')"
+	bq query --use_legacy_sql=false "CREATE ROW ACCESS POLICY dtc_rls_policy_us ON `project_surv_dtc.country_ref` GRANT TO ('user:neetau43@gmail.com') FILTER USING (country = 'US')"
+	
+	•  Create BQ Dataset View
+            bq mk --dataset project_surv_dtc_view
+
+	• Give  Authorized Dataset permission to underlying dataset/view
+	Give dataset project_surv_dtc_view permission to dataset project_surv_dtc
+	This need to be done from project_surv_dtc -> project_surv_dtc_view
+	bq update --source dataset=practical-case-436315-t2:project_surv_dtc.country_event --target dataset=practical-case-436315-t2:project_surv_dtc.v_country_event
+	
+	• Create  Authorized View 
+	bq query --use_legacy_sql=false "CREATE OR REPLACE VIEW `project_surv_dtc_view.v_country_event` AS SELECT a.* FROM `project_surv_dtc.country_event` a,`project_surv_dtc.country_ref` b where a.country_name=b.country"
+	
+	
+	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	• Create New Gmail Account & GCP Console
+	testbq.testbq4@gmail.com - Sh@
+	Login with new user to GCP console
+	Create New Project practical-case-436315-t2-view
+	
+	
+	• Drop Row Level Security & recreate to add new user
+	bq query --use_legacy_sql=false "DROP ROW ACCESS POLICY dtc_rls_policy ON `project_surv_dtc.country_ref`";
+	bq query --use_legacy_sql=false "DROP ALL ROW ACCESS POLICIES ON `project_surv_dtc.country_ref`";
+	
+	bq query --use_legacy_sql=false "CREATE ROW ACCESS POLICY dtc_rls_policy ON `project_surv_dtc.country_ref` GRANT TO ('user:neetau43@gmail.com','user:testbq.testbq4@gmail.com') FILTER USING (country = 'DE')"
+	bq query --use_legacy_sql=false "CREATE ROW ACCESS POLICY dtc_rls_policy_us ON `project_surv_dtc.country_ref` GRANT TO ('user:neetau43@gmail.com','user:testbq.testbq4@gmail.com') FILTER USING (country = 'US')"
+	
+	
+	• Grant Permission on View to user in another project
+	bq add-iam-policy-binding practical-case-436315-t2:project_surv_dtc_view.v_country_event --member="testbq.testbq4@gmail.com" --role="roles/bigquery.dataViewer"
+	
+	
+	
+	
+	SELECT * FROM `practical-case-436315-t2.project_surv_dtc_view.v_country_event` LIMIT 1000
+	
